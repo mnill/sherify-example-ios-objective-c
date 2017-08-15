@@ -65,6 +65,7 @@
         //then, check the identifier against the product IDs
         //that you have defined to check which product the user
         //just purchased
+
         __block id _self = self;
         switch (SKTransaction.transactionState) {
             case SKPaymentTransactionStatePurchasing:
@@ -73,38 +74,57 @@
                 break;
             case SKPaymentTransactionStateDeferred:
                 NSLog(@"Transaction state -> Deferred");
-            case SKPaymentTransactionStatePurchased:
+                break;
+            case SKPaymentTransactionStatePurchased: {
+            
+                NSLog(@"Transaction state -> Purchased");
+
                 //this is called when the user has successfully purchased the package (Cha-Ching!)
                  //you can add your code for what you want to happen when the user buys the purchase here, for this tutorial we use removing ads
-                [self validatePayment:[[SKTransaction transactionReceipt] base64EncodedStringWithOptions:0]  user:[[[UIDevice currentDevice] identifierForVendor] UUIDString] handler:^(NSString *status, NSString *transactionID) {
-                        if ([status isEqualToString:@"ok"]) {
-                            dispatch_async(dispatch_get_main_queue(), ^{
-                                [[SKPaymentQueue defaultQueue] finishTransaction:SKTransaction];
-                                [_self addCoins:100 forTransactionID:transactionID];
-                                [_self checkCoinsCount];
-                                [_self alert:@"Payment success!" withHandler:^(UIAlertAction * action) {}];
-                            });
-                        } else {
+                
+                NSData* receipt = [NSData dataWithContentsOfURL:[[NSBundle mainBundle] appStoreReceiptURL]];
+                if (!receipt) {
+                    //DO NOT FINISH THE TRANSACTION ON ERROR.
+                    [_self alert:@"Payment error! Please Try again later" withHandler:^(UIAlertAction * action) {}];
+                } else {
+                    [_self validatePayment:[receipt base64EncodedStringWithOptions:0] user:[[[UIDevice currentDevice] identifierForVendor] UUIDString] handler:^(NSString *status, NSString *transactionID) {
+                            if ([status isEqualToString:@"ok"]) {
+                                dispatch_async(dispatch_get_main_queue(), ^{
+                                    [[SKPaymentQueue defaultQueue] finishTransaction:SKTransaction];
+                                    [_self addCoins:100 forTransactionID:transactionID];
+                                    [_self checkCoinsCount];
+                                    [_self alert:@"Payment success!" withHandler:^(UIAlertAction * action) {}];
+                                });
+                            } else {
                             //DO NOT FINISH THE TRANSACTION ON ERROR.
-                            [_self alert:@"Payment error! Please Try again later" withHandler:^(UIAlertAction * action) {}];
-                        }
-                }];
+                                [_self alert:@"Payment error! Please Try again later" withHandler:^(UIAlertAction * action) {}];
+                            }
+                    }];
+                }
                 break;
-            case SKPaymentTransactionStateRestored:
+            }
+            case SKPaymentTransactionStateRestored: {
                 NSLog(@"Transaction state -> Restored");
+                NSData* receipt = [NSData dataWithContentsOfURL:[[NSBundle mainBundle] appStoreReceiptURL]];
                 //add the same code as you did from SKPaymentTransactionStatePurchased here
-                [self validatePayment:[[SKTransaction transactionReceipt] base64EncodedStringWithOptions:0] user:[[[UIDevice currentDevice] identifierForVendor] UUIDString] handler:^(NSString *status, NSString *transactionID) {
-                    if ([status isEqualToString:@"ok"]) {
-                        [_self addCoins:100 forTransactionID:transactionID];
-                        [_self checkCoinsCount];
-                        [[SKPaymentQueue defaultQueue] finishTransaction:SKTransaction];
-                        [_self alert:@"Payment success" withHandler:^(UIAlertAction * action) {}];
-                    } else {
-                        //TODO do not finish transaction on error!
-                        [_self alert:@"Payment error! Please Try again later" withHandler:^(UIAlertAction * action) {}];
-                    }
-                }];
+                if (!receipt) {
+                    //DO NOT FINISH THE TRANSACTION ON ERROR.
+                    [_self alert:@"Payment error! Please Try again later" withHandler:^(UIAlertAction * action) {}];
+                } else {
+                    [self validatePayment:[receipt base64EncodedStringWithOptions:0] user:[[[UIDevice currentDevice] identifierForVendor] UUIDString] handler:^(NSString *status, NSString   *transactionID) {
+                        if ([status isEqualToString:@"ok"]) {
+                            [_self addCoins:100 forTransactionID:transactionID];
+                            [_self checkCoinsCount];
+                            [[SKPaymentQueue defaultQueue] finishTransaction:SKTransaction];
+                            [_self alert:@"Payment success" withHandler:^(UIAlertAction * action) {}];
+                        } else {
+                            //TODO do not finish transaction on error!
+                            [_self alert:@"Payment error! Please Try again later" withHandler:^(UIAlertAction * action)             {}];
+                        }
+                    }];
+                }
                 break;
+            }
             case SKPaymentTransactionStateFailed:
                 //called when the transaction does not finish
                 if (SKTransaction.error.code == SKErrorPaymentCancelled) {
