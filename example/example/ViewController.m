@@ -187,7 +187,7 @@
                                               }];
                                           } else {
                                               NSString* status = [jsonDict valueForKey:@"status"];
-                                              if ([status isEqualToString:@"ok"]) {
+                                              if ([status isEqualToString:@"ok"] || [status isEqualToString:@"dup"]) {
                                                   NSString* transactionID = [jsonDict valueForKey:@"transaction"];
                                                   _completionHandler(status, transactionID);
                                               } else {
